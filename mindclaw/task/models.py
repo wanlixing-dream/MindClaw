@@ -27,6 +27,7 @@ class TaskPriority(StrEnum):
 class Task:
     task_id: str
     title: str
+    team_name: str = ""
     description: str = ""
     owner: str = ""
     status: TaskStatus = TaskStatus.PENDING
