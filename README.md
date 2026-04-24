@@ -1,5 +1,7 @@
 # MindClaw
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 **Build autonomous agent teams on top of a powerful runtime core.**
 
 MindClaw is an open-source multi-agent orchestration shell for autonomous coding teams.
@@ -134,6 +136,7 @@ mindclaw doctor
 ```text
 MindClaw/
 ├── README.md
+├── README.zh-CN.md
 ├── ROADMAP.md
 ├── docs/
 │   └── architecture.md
