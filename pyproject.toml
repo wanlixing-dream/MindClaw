@@ -1,0 +1,42 @@
+[project]
+name = "mindclaw"
+version = "0.1.0"
+description = "A multi-agent orchestration shell built on top of a powerful runtime core"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "wanlixing-dream", email = "1807189007@qq.com" }
+]
+dependencies = [
+    "typer>=0.12.0,<1.0.0",
+    "rich>=13.0.0,<15.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/wanlixing-dream/MindClaw"
+Repository = "https://github.com/wanlixing-dream/MindClaw.git"
+Issues = "https://github.com/wanlixing-dream/MindClaw/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0,<9.0.0",
+    "ruff>=0.5.0",
+]
+
+[project.scripts]
+mindclaw = "mindclaw.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mindclaw"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
