@@ -2,126 +2,105 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-**Build autonomous agent teams on top of a powerful runtime core.**
+**Hermes is the most capable solo agent. MindClaw makes it a team.**
 
-MindClaw is an open-source multi-agent orchestration shell for autonomous coding teams.
-It is designed to combine two things that are usually separated:
+MindClaw is a multi-agent orchestration layer built on top of [Hermes Agent](https://github.com/NousResearch/hermes-agent). It takes Hermes' powerful single-agent runtime — 40+ tools, self-improving memory, any model provider — and adds structured team coordination: task decomposition, dependency scheduling, parallel execution, and real-time observability.
 
-- powerful single-agent execution
-- explicit team-level coordination
-
-MindClaw aims to give you a practical way to build leader-worker agent systems that can split work, isolate execution, exchange messages, track task state, and plug into different runtime engines underneath.
+Inspired by the orchestration patterns of [ClawTeam](https://github.com/HKUDS/ClawTeam) and powered by the execution engine of [Hermes](https://github.com/NousResearch/hermes-agent).
 
 > If this direction looks useful to you, consider giving the project a star to follow its development.
 
-## Why MindClaw
+---
 
-Most agent systems lean too far in one direction:
+## The Problem
 
-- some are strong at single-agent execution but weak at team coordination
-- some are strong at orchestration but weak at runtime intelligence
-- some are powerful internally but expose very little explicit team state
+You're using Hermes for a complex project. You type your goal. The agent works for 30 minutes, the context window fills up, it loses track, starts going in circles.
 
-MindClaw is being built to bridge that gap.
+You wish you could split the work across multiple agents — one doing backend, one doing frontend, one writing tests — but:
 
-The goal is not just to run more agents.
-The goal is to make multi-agent work understandable, composable, and open-source friendly.
+- Hermes' built-in `delegate_task` is **blocking** — the parent agent waits for all children to finish, you can't see intermediate progress
+- It's **ephemeral** — if anything crashes, all state is lost
+- It's **flat** — only parent-child relationships, no structured task graphs or team-level coordination
 
-## What MindClaw Is Trying to Do
+Other multi-agent frameworks (CrewAI, AutoGen) solve coordination but their agents are just LLM API wrappers — no terminal, no file system, no git, no real developer toolchain.
 
-With MindClaw, you should eventually be able to:
+## The Solution
 
-- create a leader + worker agent team
-- split work into task graphs and execution stages
-- isolate each worker in its own workspace
-- route messages between agents through structured state
-- observe progress from a unified shell or board
-- plug different runtime engines under the same orchestration model
-
-## Core Design Ideas
-
-### 1. Team state should be explicit
-
-MindClaw treats team membership, tasks, messages, workspaces, and lifecycle as first-class orchestration state.
-
-### 2. Runtime execution should be pluggable
-
-MindClaw should not be locked to a single agent runtime. It should be able to sit above different execution engines through a runtime adapter layer.
-
-### 3. Isolation should be built in
-
-Workers should be able to operate in separate workspaces so parallel execution is easier to reason about and safer to manage.
-
-### 4. Open-source readability matters
-
-The repository is being organized from the root as a clean standalone project so contributors can understand the system boundary, roadmap, and implementation direction quickly.
-
-## High-Level Architecture
-
-```text
-User
-  -> MindClaw CLI / Shell
-    -> Orchestrator
-      -> Team / Tasks / Messaging / Workspaces
-        -> Runtime Adapter
-          -> Agent Runtime
-            -> Tools / Memory / Sessions / Models
+```bash
+mindclaw run "Build a REST API with auth, a React frontend, and integration tests"
 ```
 
-At a high level:
+MindClaw decomposes your goal into a task graph, spawns a team of Hermes agents, schedules tasks by dependency order, and streams progress in real-time. Each agent gets a focused context window, dedicated tools, and a clear scope.
 
-- **MindClaw Shell** owns orchestration and team coordination
-- **Runtime Adapter** translates worker intent into a concrete runtime
-- **Agent Runtime** owns single-agent execution, memory, tools, and sessions
+```
+🧠 Decomposing goal into tasks...
+  ├── T1: Design API schema and data models
+  ├── T2: Implement JWT authentication (depends on T1)
+  ├── T3: Build CRUD endpoints (depends on T1)
+  ├── T4: Create React frontend (depends on T1)
+  └── T5: Write integration tests (depends on T2, T3, T4)
 
-For more detail, see `docs/architecture.md`.
+🚀 Phase: execute
+  ┌─────────────┬──────────┬───────────┐
+  │ Task        │ Agent    │ Status    │
+  ├─────────────┼──────────┼───────────┤
+  │ T1: Schema  │ worker-1 │ ✅ done    │
+  │ T2: Auth    │ worker-2 │ 🔄 running │
+  │ T3: CRUD    │ worker-3 │ 🔄 running │
+  │ T4: React   │ worker-4 │ 🔄 running │
+  │ T5: Tests   │ —        │ ⏳ blocked │
+  └─────────────┴──────────┴───────────┘
+```
 
-## Planned Capabilities
+---
 
-- team orchestration
-- worker spawning and lifecycle management
-- task dependency tracking
-- isolated git workspaces
-- inter-agent messaging
-- runtime adapter layer
-- board and monitoring UI
-- reusable templates for common workflows
-- runtime capability reporting and observability
+## Why MindClaw
 
-## Example Use Cases
+### hermes alone vs hermes + MindClaw
 
-### Autonomous software engineering
+| | `hermes` alone | `hermes` + MindClaw |
+|---|---|---|
+| Complex tasks | One agent handles everything, context overflows | Auto-split into sub-tasks, each agent stays focused |
+| Parallel execution | `delegate_task` blocks, parent agent idles | True parallel, non-blocking, real-time observable |
+| Crash recovery | All state lost, start over | Task state persisted, resume from checkpoint |
+| Progress visibility | Can't see what sub-agents are doing | Live task board + agent activity stream |
+| Team coordination | Only parent-child relationship | Leader-worker structure, inter-agent messaging |
+| Getting started | Already a Hermes user: zero cost | `pip install mindclaw` → `mindclaw run` |
 
-One leader agent plans work, multiple workers implement isolated parts of a codebase, and the shell tracks progress and ownership.
+### Why not just use X?
 
-### Research swarms
+**"Why not Hermes' built-in `delegate_task`?"**
+`delegate_task` is in-process, short-lived delegation — the parent blocks, no persistence, no observability. Good for simple sub-tasks. MindClaw is persistent team orchestration — task graphs, dependency scheduling, parallel execution, state recovery. Built for complex projects that need multiple agents collaborating over time.
 
-Different workers explore different hypotheses, tools, or experiment branches while the shell keeps the team state coherent.
+**"Why not ClawTeam?"**
+ClawTeam manages agents as black-box CLI processes via tmux. MindClaw integrates Hermes at the Python API level — it controls each worker's model, tools, context, and iteration budget. No tmux, no extra CLI dependencies.
 
-### Long-running agent workflows
+**"Why not CrewAI / AutoGen?"**
+Their agents can only call LLM APIs. Each MindClaw worker is a full Hermes agent — with terminal, file system, browser, memory, and skills. It doesn't simulate a developer's toolchain. It **is** the toolchain.
 
-MindClaw is intended to support workflows where agent sessions, task state, and execution boundaries need to stay understandable over time.
+---
 
-### Reusable team templates
+## Architecture
 
-The long-term goal is to support reusable archetypes for common coordination patterns, such as engineering teams, research teams, and domain-specific swarms.
+```text
+User Goal
+  → MindClaw CLI
+    → Decomposer (LLM-powered task splitting)
+      → TaskGraph (DAG of dependent tasks)
+        → Scheduler (topological ordering + readiness detection)
+          → WorkerPool (Hermes AIAgent instances)
+            → Tracker (real-time status + persistence)
+```
 
-## Project Status
+**Key design decisions:**
 
-MindClaw is currently in **early-stage development**.
+- **Pipeline architecture** — each module (decomposer, scheduler, worker pool, tracker) is independent with clear interfaces. Replace any piece without touching the others.
+- **Deep runtime integration** — workers are Hermes `AIAgent` objects instantiated via Python API, not black-box CLI processes. MindClaw controls model selection, toolsets, system prompts, and iteration budgets per worker.
+- **Phase-driven orchestration** — inspired by ClawTeam's harness model: plan → execute → verify. Each phase has gate conditions that must pass before advancing.
 
-The current repository focus is:
-
-- establishing the public project structure
-- defining the architecture boundary
-- creating the minimal CLI and package scaffold
-- preparing the core orchestration model
-
-This means the repo is already shaped for open-source development, but the deeper orchestration and runtime integration layers are still under active construction.
+---
 
 ## Quick Start
-
-MindClaw is still being scaffolded, but the repository is already installable.
 
 ```bash
 git clone https://github.com/wanlixing-dream/MindClaw.git
@@ -136,48 +115,44 @@ mindclaw doctor
 ```text
 MindClaw/
 ├── README.md
-├── README.zh-CN.md
 ├── ROADMAP.md
 ├── docs/
 │   └── architecture.md
 ├── mindclaw/
-│   ├── __init__.py
-│   ├── __main__.py
-│   └── cli/
+│   ├── cli/              # CLI commands
+│   ├── decomposer/       # LLM-powered task decomposition
+│   ├── scheduler/        # DAG topological scheduling
+│   ├── worker_pool/      # Worker lifecycle management
+│   ├── tracker/          # Real-time status tracking
+│   ├── orchestrator/     # Pipeline controller
+│   ├── team/             # Team and member models
+│   ├── task/             # Task state and dependencies
+│   ├── messaging/        # Inter-agent messaging
+│   ├── workspace/        # Workspace isolation
+│   ├── runtime/          # Runtime adapter interface
+│   └── state/            # Persistent state store
 ├── tests/
 └── pyproject.toml
 ```
 
 ## Roadmap
 
-The project is currently moving through these early phases:
-
-- **Phase 0** — repository foundation
-- **Phase 1** — core domain model
-- **Phase 2** — local orchestration MVP
-- **Phase 3** — runtime integration
+- **Phase 0** ✅ — repository foundation
+- **Phase 1** ✅ — core domain model
+- **Phase 2** 🔄 — local orchestration MVP (decomposer + scheduler + mock workers)
+- **Phase 3** — Hermes runtime integration
+- **Phase 4** — developer experience and templates
 
 See `ROADMAP.md` for the full phase breakdown.
 
 ## Documentation
 
-- `docs/architecture.md` — system architecture draft
-- `ROADMAP.md` — implementation phases and delivery plan
-
-More documentation, diagrams, and examples will be added as the core modules stabilize.
+- `docs/architecture.md` — system architecture
+- `ROADMAP.md` — implementation phases
 
 ## Contributing
 
 Contributions, feedback, architecture discussions, and experiments are welcome.
-
-In the current phase, the most useful contributions are:
-
-- architecture feedback
-- naming and API design feedback
-- orchestration model review
-- early implementation experiments
-
-A dedicated contribution guide will be added as the project stabilizes.
 
 ## License
 
@@ -185,4 +160,4 @@ MIT
 
 ## Acknowledgements
 
-MindClaw is being developed as an original project inspired by the broader open-source agent ecosystem and practical work on agent runtimes, orchestration systems, and autonomous workflows.
+MindClaw is built on top of the [Hermes Agent](https://github.com/NousResearch/hermes-agent) runtime by Nous Research, and draws orchestration design inspiration from [ClawTeam](https://github.com/HKUDS/ClawTeam) by HKUDS.
