@@ -97,7 +97,11 @@ def modules() -> None:
     table.add_row("mindclaw.messaging", "Inter-agent message models")
     table.add_row("mindclaw.workspace", "Workspace ownership and assignment models")
     table.add_row("mindclaw.runtime", "Runtime adapter interface and registry")
-    table.add_row("mindclaw.orchestrator", "Shell-level orchestration plan and state")
+    table.add_row("mindclaw.orchestrator", "Pipeline orchestrator (decompose → schedule → dispatch → track)")
+    table.add_row("mindclaw.decomposer", "LLM-powered task decomposition")
+    table.add_row("mindclaw.scheduler", "DAG topological scheduling engine")
+    table.add_row("mindclaw.worker_pool", "Worker lifecycle and dispatch management")
+    table.add_row("mindclaw.tracker", "Real-time task status tracking")
 
     console.print(table)
 
@@ -222,3 +226,30 @@ def task_list(
         console.print("[yellow]当前还没有任务。[/yellow]")
         return
     console.print(table)
+
+
+@app.command("run")
+def run_goal(
+    goal: str = typer.Argument(..., help="High-level goal for the agent team."),
+    workers: int = typer.Option(4, "--workers", "-w", help="Max parallel workers."),
+) -> None:
+    """Run a goal through the full orchestration pipeline."""
+    from mindclaw.decomposer import MockDecomposer
+    from mindclaw.orchestrator.service import Orchestrator
+    from mindclaw.worker_pool import MockBackend
+
+    console.print(f"\n[bold cyan]MindClaw[/bold cyan] starting orchestration...\n")
+
+    orchestrator = Orchestrator(
+        decomposer=MockDecomposer(),
+        worker_backend=MockBackend(),
+        max_workers=workers,
+        poll_interval=0.5,
+    )
+
+    def on_progress(summary: str) -> None:
+        console.clear()
+        console.print(summary)
+
+    result = orchestrator.run(goal, on_progress=on_progress)
+    console.print(result.summary)
